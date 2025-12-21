@@ -7,11 +7,11 @@ toolchain go1.24.0
 require (
 	github.com/go-audio/audio v1.0.0
 	github.com/go-audio/wav v1.1.0
-	github.com/markus-wa/demoinfocs-golang/v4 v4.4.1-0.20251105222226-db1069cfc547
+	github.com/markus-wa/demoinfocs-golang/v4 v4.4.0
 	github.com/markus-wa/gobitread v0.2.4
 	github.com/pkg/errors v0.9.1
 	github.com/youpy/go-wav v0.3.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302
 )
 
@@ -27,3 +27,5 @@ require (
 	github.com/youpy/go-riff v0.1.0 // indirect
 	github.com/zaf/g711 v1.4.0 // indirect
 )
+
+replace github.com/markus-wa/demoinfocs-golang/v4 v4.4.0 => github.com/markus-wa/demoinfocs-golang/v4 v4.4.1-0.20251218225334-6ea41415523b

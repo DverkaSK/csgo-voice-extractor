@@ -156,9 +156,9 @@ _Because the CSGO audio library is a 32-bit DLL, you need a 32-bit `GCC` and set
 > You can install it by adding `arch -x86_64` before the official command to install Homebrew (`arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
 
 1. Install [Homebrew](https://brew.sh) **x64 version**
-2. `arch -x86_64 brew install opus`
-3. `arch -x86_64 brew install pkg-config`
-4. `cp /usr/local/Cellar/opus/1.4/lib/libopus.0.dylib dist/bin/darwin-x64` (`arch -x86_64 brew info opus` to get the path)
+2. `arch -x86_64 /usr/local/bin/brew install opus`
+3. `arch -x86_64 /usr/local/bin/brew install pkg-config`
+4. `cp /usr/local/Cellar/opus/1.6/lib/libopus.0.dylib dist/bin/darwin-x64` (`arch -x86_64 brew info opus` to get the path)
 5. `DYLD_LIBRARY_PATH=dist/bin/darwin-x64 CGO_ENABLED=1 GOARCH=amd64 go run -tags nolibopusfile .`
 
 > [!WARNING]  
