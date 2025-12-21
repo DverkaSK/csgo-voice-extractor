@@ -12,6 +12,10 @@ on:
           - minor
           - major
 
+permissions:
+  id-token: write
+  contents: write
+
 jobs:
   ensure-changes:
     name: Ensure there are changes
@@ -19,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Required to get all existing tags
           fetch-tags: true
@@ -42,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install deps
         # The x86_64 version is installed in /usr/local/bin/brew
@@ -61,7 +65,7 @@ jobs:
           cp /usr/local/Cellar/opus/$OPUS_VERSION/lib/libopus.0.dylib dist/bin/darwin-x64
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
 
@@ -72,7 +76,7 @@ jobs:
           zip -r darwin-x64.zip darwin-x64
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: darwin-x64
           path: dist/bin/darwin-x64.zip
@@ -84,7 +88,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install deps
         run: |
@@ -92,7 +96,7 @@ jobs:
           cp /usr/lib/x86_64-linux-gnu/libopus.so.0 dist/bin/linux-x64
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
 
@@ -103,7 +107,7 @@ jobs:
           zip -r linux-x64.zip linux-x64
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-x64
           path: dist/bin/linux-x64.zip
@@ -115,7 +119,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -130,7 +134,7 @@ jobs:
             make
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
 
@@ -168,7 +172,7 @@ jobs:
           zip -r win32-x64.zip win32-x64
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: win32-x64
           path: dist/bin/win32-x64.zip
@@ -179,21 +183,24 @@ jobs:
     needs: [build-macos, build-linux, build-windows]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Required to get all existing tags
           fetch-tags: true
           ssh-key: ${{ secrets.SSH_KEY }}
 
       - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          registry-url: "https://registry.npmjs.org"
+        uses: actions/setup-node@v6
+
+      # Use a recent npm version that supports trusted publishing
+      - name: Install npm
+        run: |
+          sudo npm install -g npm@11.7.0
 
       - name: Bump version
         run: |
-          git config --global user.name "AkiVer"
-          git config --global user.email ${{ secrets.NPM_EMAIL }}
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           npm version ${{ github.event.inputs.release-type }} --no-git-tag-version --tag-version-prefix=""
           node -p "require('./package.json').version" > /tmp/NEW_VERSION
           git add package.json
@@ -201,7 +208,7 @@ jobs:
           git tag "v$(cat /tmp/NEW_VERSION)"
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
 
       - name: Extract and copy artifacts for NPM
         run: |
@@ -223,9 +230,7 @@ jobs:
 
       - name: Push changes
         run: |
-          git config --global user.name "AkiVer"
-          git config --global user.email ${{ secrets.NPM_EMAIL }}
-          npm publish --access public
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          npm publish
           git push origin main --tags
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
