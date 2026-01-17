@@ -17,6 +17,7 @@ var outputPath string
 var demoPaths []string
 var mode string
 var steamIDs []string
+var exportVoiceTimeline bool
 
 func computeOutputPathFlag() {
 	if outputPath == "" {
@@ -68,6 +69,8 @@ func parseArgs() {
 	flag.BoolVar(&common.ShouldExitOnFirstError, "exit-on-first-error", false, "Exit the program on at the first error encountered, default to false.")
 	flag.StringVar(&mode, "mode", string(common.ModeSplitCompact), "Output mode. Can be 'split-compact', 'split-full' or 'single-full'. Default to 'split-compact'.")
 	flag.StringVar(&steamIDsFlag, "steam-ids", "", "Comma-separated list of Steam IDs 64 to extract voice data for.")
+	flag.BoolVar(&exportVoiceTimeline, "export-voice-timeline", false, "Export per-player voice timeline as JSON.")
+
 	flag.Parse()
 
 	computeSteamIDsFlag(steamIDsFlag)
@@ -127,12 +130,13 @@ func processDemoFile(demoPath string) {
 	}
 
 	options := common.ExtractOptions{
-		DemoPath:   demoPath,
-		DemoName:   strings.TrimSuffix(filepath.Base(demoPath), filepath.Ext(demoPath)),
-		File:       file,
-		OutputPath: outputPath,
-		Mode:       common.Mode(mode),
-		SteamIDs:   steamIDs,
+		DemoPath:            demoPath,
+		DemoName:            strings.TrimSuffix(filepath.Base(demoPath), filepath.Ext(demoPath)),
+		File:                file,
+		OutputPath:          outputPath,
+		Mode:                common.Mode(mode),
+		SteamIDs:            steamIDs,
+		ExportVoiceTimeline: exportVoiceTimeline,
 	}
 
 	switch timestamp {

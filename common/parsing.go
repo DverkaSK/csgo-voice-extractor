@@ -9,17 +9,20 @@ import (
 )
 
 type ExtractOptions struct {
-	DemoPath   string
-	DemoName   string
-	File       *os.File
-	OutputPath string
-	Mode       Mode
-	SteamIDs   []string
+	DemoPath            string
+	DemoName            string
+	File                *os.File
+	OutputPath          string
+	Mode                Mode
+	SteamIDs            []string
+	ExportVoiceTimeline bool
 }
 
 type VoiceSegment struct {
 	Data      []byte
-	Timestamp float64 // in seconds
+	Timestamp float64 // seconds
+	Tick      int
+	Round     int
 }
 
 var playerNameCache = make(map[uint64]string)
