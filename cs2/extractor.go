@@ -15,6 +15,8 @@ import (
 	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
 	"github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/msgs2"
 	"gopkg.in/hraban/opus.v2"
+
+	"encoding/json"
 )
 
 const (
@@ -515,6 +517,8 @@ func Extract(options common.ExtractOptions) {
 	defer parser.Close()
 	var segmentsPerPlayer = map[string][]common.VoiceSegment{}
 	var format msgs2.VoiceDataFormatT
+	speakingStates := make(map[string]*speakingState)
+	voiceTimeline := make(map[string][]VoiceSpeakingSegment)
 
 	parser.RegisterNetMessageHandler(func(m *msgs2.CSVCMsg_VoiceData) {
 		steamID := m.GetXuid()
@@ -546,6 +550,45 @@ func Extract(options common.ExtractOptions) {
 			Data:      m.Audio.VoiceData,
 			Timestamp: parser.CurrentTime().Seconds(),
 		})
+
+		tick := parser.CurrentFrame()
+		timeSec := parser.CurrentTime().Seconds()
+		round := parser.GameState().TotalRoundsPlayed()
+
+		st, ok := speakingStates[playerID]
+		if !ok {
+			st = &speakingState{}
+			speakingStates[playerID] = st
+		}
+
+		if !st.Active {
+			st.Active = true
+			st.Segment = VoiceSpeakingSegment{
+				StartTick: tick,
+				StartTime: timeSec,
+				Round:     round,
+			}
+		}
+
+		st.Segment.EndTick = tick
+		st.Segment.EndTime = timeSec
+		st.LastVoiceTick = tick
+	})
+
+	const silenceTicks = 15 // ~250 ms at 64 tick
+
+	parser.RegisterEventHandler(func(_ any) {
+		currentTick := parser.CurrentFrame()
+
+		for playerID, st := range speakingStates {
+			if st.Active && currentTick-st.LastVoiceTick > silenceTicks {
+				voiceTimeline[playerID] = append(
+					voiceTimeline[playerID],
+					st.Segment,
+				)
+				st.Active = false
+			}
+		}
 	})
 
 	err := parser.ParseToEnd()
@@ -573,9 +616,27 @@ func Extract(options common.ExtractOptions) {
 		return
 	}
 
+	for playerID, st := range speakingStates {
+		if st.Active {
+			voiceTimeline[playerID] = append(
+				voiceTimeline[playerID],
+				st.Segment,
+			)
+		}
+	}
+
 	fmt.Println("Parsing done, generating audio files...")
 	durationSeconds := parser.CurrentTime().Seconds()
 	demoName := strings.TrimSuffix(filepath.Base(demoPath), filepath.Ext(demoPath))
+
+	if options.ExportVoiceTimeline {
+		exportVoiceTimelineJSON(
+			voiceTimeline,
+			demoName,
+			options.OutputPath,
+		)
+	}
+
 	if options.Mode == common.ModeSingleFull {
 		generateAudioFileWithMergedVoices(segmentsPerPlayer, format, durationSeconds, demoName, options.OutputPath)
 	} else if options.Mode == common.ModeSplitFull {
@@ -583,4 +644,50 @@ func Extract(options common.ExtractOptions) {
 	} else {
 		generateAudioFilesWithCompactLength(segmentsPerPlayer, format, demoName, options)
 	}
+}
+
+type VoiceTimelineEntry struct {
+	Frame int     `json:"frame"`
+	Time  float64 `json:"time"`
+	Round int     `json:"round"`
+}
+
+func exportVoiceTimelineJSON(
+	voiceTimeline map[string][]VoiceSpeakingSegment,
+	demoName string,
+	outputPath string,
+) {
+	for playerID, segments := range voiceTimeline {
+		fileName := fmt.Sprintf("%s_%s.voice.json", demoName, playerID)
+		filePath := filepath.Join(outputPath, fileName)
+
+		f, err := os.Create(filePath)
+		if err != nil {
+			fmt.Println("Failed to create voice timeline file:", err)
+			continue
+		}
+
+		enc := json.NewEncoder(f)
+		enc.SetIndent("", "  ")
+
+		if err := enc.Encode(segments); err != nil {
+			fmt.Println("Failed to write voice timeline:", err)
+		}
+
+		_ = f.Close()
+	}
+}
+
+type VoiceSpeakingSegment struct {
+	StartTick int     `json:"start_tick"`
+	EndTick   int     `json:"end_tick"`
+	StartTime float64 `json:"start_time"`
+	EndTime   float64 `json:"end_time"`
+	Round     int     `json:"round"`
+}
+
+type speakingState struct {
+	Active        bool
+	Segment       VoiceSpeakingSegment
+	LastVoiceTick int
 }
